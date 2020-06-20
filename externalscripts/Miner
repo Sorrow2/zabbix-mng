@@ -1,0 +1,41 @@
+#!/usr/bin/env python2.7
+import socket
+import json
+import requests
+import sys, os
+
+command = sys.argv[1]
+ip = sys.argv[2]
+port = 4028
+
+def stats(ip):
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.settimeout(1)
+    try:
+        sock.connect((ip, int(port)))
+
+        sock.send(json.dumps({'command': command}))
+
+        resp = ''
+        while 1:
+            buf = sock.recv(4096).decode("utf-8")
+            if buf:
+                resp += buf
+            else:
+                break
+
+        if command == "stats":
+            res = "STATS"
+        else:
+            res = "POOLS"
+
+        result = json.loads(resp[:-1].replace('}{', '},{'))
+        result = json.dumps(result[res])
+        print (result)
+    except Exception as e:
+        print("Error " + str(e))
+    finally:
+        sock.shutdown(socket.SHUT_RDWR)
+        sock.close()
+
+stats(ip)
