@@ -1,0 +1,64 @@
+version: '3'
+
+services:
+  mysql-server:
+    image: mysql:5.6
+    environment:
+      MYSQL_ROOT_PASSWORD: root_pwd
+      MYSQL_DATABASE: zabbix
+      MYSQL_USER: zabbix
+      MYSQL_PASSWORD: zabbix
+    ports:
+      - '3306:3306'
+    restart: always
+    volumes:
+      - ./src/mysql:/var/lib/mysql
+      - ./.data/conf:/etc/mysql/conf.d 
+    command: ['mysqld', '--character-set-server=utf8', '--collation-server=utf8_bin']
+
+  zabbix-server:
+    image: zabbix/zabbix-server-mysql:ubuntu-4.4-latest
+    environment:
+      DB_SERVER_HOST: mysql-server
+      MYSQL_DATABASE: zabbix
+      MYSQL_USER: zabbix
+      MYSQL_PASSWORD: zabbix
+      PHP_TZ: Asia/Irkutsk
+    ports:
+       - '10051:10051'
+    restart: always
+    volumes:
+      - ./externalscripts:/usr/lib/zabbix/externalscripts
+    links: 
+      - mysql-server
+    depends_on:
+      - mysql-server
+    env_file:
+      - .env_srv
+
+  zabbix-web:
+    image: zabbix/zabbix-web-nginx-mysql:ubuntu-4.4-latest
+    container_name: zabbix-web
+    environment:
+      MYSQL_ROOT_PASSWORD: root_pwd
+      MYSQL_USER: zabbix
+      MYSQL_PASSWORD: zabbix
+      ZBX_SERVER_HOST: zabbix-server
+      PHP_TZ: Asia/Irkutsk
+    ports:
+      - '85:80'
+    restart: always
+    links: 
+      - zabbix-server
+    depends_on:
+      - zabbix-server
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    links: 
+      - mysql-server:db
+    ports:
+      - 86:80
+    environment:
+      MYSQL_ROOT_PASSWORD: root_pwd
+    depends_on:
+      - mysql-server
